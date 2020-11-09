@@ -14,7 +14,7 @@ module TuyaCloud
 
     def initialize(username, password, country_code, brand, region = DEFAULT_REGION)
       self.auth = Auth.new(username, password, country_code, brand, region)
-      auth.login
+      auth.recover_state_or_login
       self.devices = []
     end
 
@@ -71,6 +71,35 @@ module TuyaCloud
         self.region       = region
       end
 
+      def state_file_path
+        ".tuya-#{username}-state"
+      end
+
+      def last_state
+        return unless File.exist?(state_file_path)
+
+        JSON.parse File.read(state_file_path)
+      end
+
+      def save_to_state!
+        File.write state_file_path, {
+          access_token: access_token,
+          refresh_token: refresh_token,
+          expire_time: expire_time.to_i
+        }.to_json
+      end
+
+      def recover_state_or_login
+        state = last_state
+        return login if state.nil?
+
+        self.access_token = state['access_token']
+        self.refresh_token = state['refresh_token']
+        self.expire_time = Time.at(state['expire_time'])
+
+        refresh_access_token
+      end
+
       def cloud_url
         CLOUD_URL.gsub('%', region)
       end
@@ -123,6 +152,9 @@ module TuyaCloud
         self.access_token = json['access_token']
         self.refresh_token = json['refresh_token']
         self.expire_time = Time.now + json['expires_in'].to_i
+
+        save_to_state!
+
         true
       end
 

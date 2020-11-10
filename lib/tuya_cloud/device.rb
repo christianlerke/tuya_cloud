@@ -5,9 +5,11 @@ module TuyaCloud
     attr_accessor :id,
                   :name,
                   :type,
-                  :controls
+                  :controls,
+                  :json
 
     def initialize(json, auth_context)
+      self.json = json
       self.id   = json['id']
       self.name = json['name']
       self.type = json['dev_type']
@@ -24,7 +26,6 @@ module TuyaCloud
         self.controls = Scene.new(json, auth_context)
       else
         raise ArgumentError, 'unknown device type'
-
       end
     end
 
